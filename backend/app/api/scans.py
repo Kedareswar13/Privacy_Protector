@@ -14,10 +14,15 @@ router = APIRouter()
 
 
 class Seeds(BaseModel):
+    # Free-text query describing what the user wants scanned/searches for.
+    query: str | None = None
+    # Optional structured identifiers for more targeted searches.
     name: str | None = None
     email: str | None = None
     usernames: list[str] | None = None
     phones: list[str] | None = None
+    # Optional image hash used for reverse image search.
+    image_hash: str | None = None
 
 
 class CreateScanRequest(BaseModel):

@@ -25,8 +25,31 @@ async def get_plan(state: Dict[str, Any], goal: str = "produce_risk_report") -> 
     system_prompt: str = data.get("system_prompt", "")
     examples = data.get("examples", [])
 
-    # Fallback: deterministic mock plan from first example
-    def _mock_plan() -> Dict[str, Any]:
+    # Fallback: deterministic mock plan that still respects the incoming state.
+    def _mock_plan(current_state: Dict[str, Any]) -> Dict[str, Any]:
+        seeds = current_state.get("seeds", {}) if isinstance(current_state, dict) else {}
+
+        actions = []
+
+        # If the user provided a free-text query, always search the web with it.
+        query = seeds.get("query") or seeds.get("name")
+        if query:
+            actions.append({"tool": "searchWeb", "args": {"query": query, "limit": 10}})
+
+        # If an email is present, check breach databases.
+        email = seeds.get("email")
+        if email:
+            actions.append({"tool": "checkBreach", "args": {"email": email}})
+
+        # If an image hash is present, run reverse image search.
+        image_hash = seeds.get("image_hash")
+        if image_hash:
+            actions.append({"tool": "reverseImageSearch", "args": {"image_hash": image_hash}})
+
+        if actions:
+            return {"actions": actions, "stop": True}
+
+        # If we have no useful seeds, fall back to the first few-shot example's output.
         if examples:
             example = examples[0]
             return example.get("output", {"actions": [], "stop": True})
@@ -36,7 +59,7 @@ async def get_plan(state: Dict[str, Any], goal: str = "produce_risk_report") -> 
     mock_mode = os.getenv("MOCK_CONNECTORS", "false").lower() == "true"
 
     if not api_key or mock_mode:
-        return _mock_plan()
+        return _mock_plan(state)
 
     client = AsyncOpenAI(api_key=api_key)
 
@@ -77,8 +100,8 @@ async def get_plan(state: Dict[str, Any], goal: str = "produce_risk_report") -> 
         plan = json.loads(content)
         # Basic shape fallback
         if "actions" not in plan or "stop" not in plan:
-            return _mock_plan()
+            return _mock_plan(state)
         return plan
     except Exception:
-        # In case of any error, fall back to mock plan
-        return _mock_plan()
+        # In case of any error, fall back to mock plan based on current state
+        return _mock_plan(state)
