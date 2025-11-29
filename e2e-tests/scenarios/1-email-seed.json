@@ -1,0 +1,24 @@
+{
+  "id": "scenario-1",
+  "description": "Email seed with known breach and GitHub profile",
+  "seeds": {
+    "name": "Kedareswar Pattapu",
+    "email": "kedareswar.pattapu@example.test",
+    "usernames": ["kedareswar13"]
+  },
+  "gold_items": [
+    {
+      "category": "breach",
+      "source": "hibp",
+      "evidence": "pwned in 2019 breach",
+      "url": "https://haveibeenpwned.com/"
+    },
+    {
+      "category": "github_profile",
+      "source": "github",
+      "evidence": "public profile with email",
+      "url": "https://github.com/kedareswar13"
+    }
+  ],
+  "expected_min_recall": 0.7
+}

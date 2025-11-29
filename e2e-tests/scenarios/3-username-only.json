@@ -1,0 +1,16 @@
+{
+  "id": "scenario-3",
+  "description": "Username only (GitHub)",
+  "seeds": {
+    "usernames": ["alexsmith"]
+  },
+  "gold_items": [
+    {
+      "category": "github_profile",
+      "source": "github",
+      "evidence": "public profile",
+      "url": "https://github.com/alexsmith"
+    }
+  ],
+  "expected_min_recall": 0.6
+}

@@ -1,0 +1,10 @@
+{
+  "id": "scenario-2",
+  "description": "Name only (ambiguous; should ask for clarification)",
+  "seeds": {
+    "name": "Alex Smith"
+  },
+  "gold_items": [],
+  "expected_min_recall": 0.0,
+  "expected_ask_user": true
+}

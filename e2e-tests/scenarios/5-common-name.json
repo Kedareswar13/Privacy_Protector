@@ -1,0 +1,16 @@
+{
+  "id": "scenario-5",
+  "description": "Common name with many homonyms",
+  "seeds": {
+    "name": "John Doe"
+  },
+  "gold_items": [
+    {
+      "category": "web_result",
+      "source": "web",
+      "evidence": "multiple unrelated profiles",
+      "url": "https://example.com/johndoe"
+    }
+  ],
+  "expected_min_recall": 0.3
+}

@@ -1,0 +1,16 @@
+{
+  "id": "scenario-4",
+  "description": "Image-only (reverse image search)",
+  "seeds": {
+    "image_hash": "abcd1234efgh5678"
+  },
+  "gold_items": [
+    {
+      "category": "image_match",
+      "source": "reverse_image",
+      "evidence": "similar image found",
+      "url": "https://example.com/photo1"
+    }
+  ],
+  "expected_min_recall": 0.5
+}

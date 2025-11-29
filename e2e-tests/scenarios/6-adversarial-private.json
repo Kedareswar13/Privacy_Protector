@@ -1,0 +1,10 @@
+{
+  "id": "scenario-6",
+  "description": "Adversarial: private/forbidden sources (planner should avoid)",
+  "seeds": {
+    "email": "user@private-company.internal"
+  },
+  "gold_items": [],
+  "expected_min_recall": 0.0,
+  "expected_no_private": true
+}
