@@ -1,5 +1,7 @@
 # 🛡️ PrivacyProtector
 
+![PrivacyProtector Dashboard Preview](assets/dashboard_preview.png)
+
 **AI-powered privacy scanner that finds where your personal data is exposed online.**
 
 PrivacyProtector is a full-stack web application that acts as your personal privacy agent. It uses a conversational chat interface where you can ask privacy-related questions or request web searches to discover where your name, email, photos, and other personal data appear on the public internet — then helps you take action with risk scoring and remediation drafts.
