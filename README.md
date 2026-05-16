@@ -1,6 +1,6 @@
 # 🛡️ PrivacyProtector
 
-![PrivacyProtector Dashboard Preview](assets/dashboard_preview.png)
+![PrivacyProtector Landing Page](assets/login_page.jpg)
 
 **AI-powered privacy scanner that finds where your personal data is exposed online.**
 
@@ -16,6 +16,25 @@ PrivacyProtector is a full-stack web application that acts as your personal priv
 - **📧 Remediation Drafts** — Auto-generate takedown request emails for websites exposing your data
 - **🔒 Local-First AI** — All AI inference runs locally via Ollama — your data never leaves your machine
 - **🔐 Auth & Consent** — JWT-based authentication with explicit consent before any scanning
+
+---
+
+## 📸 See It In Action
+
+### Privacy Assistant Dashboard
+The main interface where you can chat with the AI, run privacy scans, and see risk-labeled results.
+
+![Privacy Assistant Dashboard](assets/main_page.jpg)
+
+### AI Explaining Privacy Concepts
+The local LLM can answer complex privacy questions like "What is GDPR?" or "Who is Elon Musk" safely and locally.
+
+![General Questions](assets/general_que.jpg)
+
+### Real-Time Video Demo
+Watch the AI scan the web, classify findings by risk level, and display actionable results.
+
+<video src="https://raw.githubusercontent.com/Kedareswar13/Privacy_Protector/main/assets/Chat_log.mp4" width="800" controls="controls"></video>
 
 ---
 
