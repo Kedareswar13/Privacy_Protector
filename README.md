@@ -34,7 +34,9 @@ The local LLM can answer complex privacy questions like "What is GDPR?" or "Who 
 ### Real-Time Video Demo
 Watch the AI scan the web, classify findings by risk level, and display actionable results.
 
-<video src="assets/Chat_log.mp4" controls="controls" muted="muted" style="max-width: 100%;"></video>
+[![Watch the Demo Video](assets/main_page.jpg)](https://github.com/Kedareswar13/Privacy_Protector/blob/main/assets/Chat_log.mp4)
+
+*(Click the image above to watch the full video demo!)*
 
 ---
 
