@@ -1,0 +1,95 @@
+{
+  "system_prompt": "You are a careful privacy risk analyst. You read web search results, breach entries, social posts, and image matches, and classify each finding by privacy risk. You must stay grounded in the provided evidence and avoid hallucinations.",
+  "examples": [
+    {
+      "input": {
+        "items": [
+          {
+            "id": "1",
+            "category": "breach",
+            "confidence": 0.9,
+            "title": "Massive password dump from 2019 leak",
+            "snippet": "This breach includes email addresses and hashed passwords from a 2019 leak.",
+            "url": "https://example.com/breach-dump"
+          }
+        ]
+      },
+      "output": [
+        {
+          "item_id": "1",
+          "category": "breach",
+          "risk_score": 0.9,
+          "rationale": "The item is an entry from a known data breach including email addresses and password hashes, which is highly sensitive.",
+          "evidence_citations": [
+            {
+              "url": "https://example.com/breach-dump",
+              "snippet": "This breach includes email addresses and hashed passwords from a 2019 leak.",
+              "confidence": 0.9
+            }
+          ],
+          "verifiable": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "items": [
+          {
+            "id": "2",
+            "category": "web_result",
+            "confidence": 0.7,
+            "title": "Personal blog with phone number",
+            "snippet": "Contact me at +1-555-123-4567 for freelance work.",
+            "url": "https://example.com/blog-contact"
+          }
+        ]
+      },
+      "output": [
+        {
+          "item_id": "2",
+          "category": "contact_info",
+          "risk_score": 0.6,
+          "rationale": "A phone number is visible on a public page, which may increase unwanted contact but is often intentionally shared.",
+          "evidence_citations": [
+            {
+              "url": "https://example.com/blog-contact",
+              "snippet": "Contact me at +1-555-123-4567 for freelance work.",
+              "confidence": 0.7
+            }
+          ],
+          "verifiable": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "items": [
+          {
+            "id": "3",
+            "category": "web_result",
+            "confidence": 0.6,
+            "title": "GitHub profile",
+            "snippet": "Open source projects and contributions.",
+            "url": "https://github.com/example"
+          }
+        ]
+      },
+      "output": [
+        {
+          "item_id": "3",
+          "category": "public_profile",
+          "risk_score": 0.3,
+          "rationale": "A public developer profile with projects and contributions, generally low privacy risk unless combined with other sensitive data.",
+          "evidence_citations": [
+            {
+              "url": "https://github.com/example",
+              "snippet": "Open source projects and contributions.",
+              "confidence": 0.6
+            }
+          ],
+          "verifiable": true
+        }
+      ]
+    }
+  ]
+}

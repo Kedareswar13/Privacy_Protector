@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,8 +22,11 @@ async def create_consent(payload: ConsentRequest, user_id: int = Depends(get_cur
     if not user_id:
         raise HTTPException(status_code=401, detail="Authentication required")
 
-    consent = Consent(user_id=user_id, scopes_json=payload.scopes.__repr__())
-    session.add(consent)
-    session.commit()
-    session.refresh(consent)
-    return {"consent_id": consent.id, "user_id": consent.user_id}
+    try:
+        consent = Consent(user_id=user_id, scopes_json=json.dumps(payload.scopes))
+        session.add(consent)
+        session.commit()
+        session.refresh(consent)
+        return {"consent_id": consent.id, "user_id": consent.user_id}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to save consent: {str(exc)}")

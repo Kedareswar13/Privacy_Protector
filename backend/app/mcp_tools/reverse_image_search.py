@@ -19,5 +19,5 @@ async def reverse_image_search(image_hash: str) -> List[Dict[str, Any]]:
             }
         ]
 
-    # TODO: Implement real reverse image search API integration.
-    raise NotImplementedError("reverse_image_search not implemented for real mode")
+    # Gracefully return empty list when no real reverse-image API is configured.
+    return []

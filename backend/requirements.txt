@@ -7,7 +7,6 @@ alembic
 psycopg2-binary
 python-jose[cryptography]
 python-dotenv
-openai
 pytest
 jsonschema
 requests

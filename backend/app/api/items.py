@@ -27,8 +27,14 @@ async def item_action(item_id: int, payload: ItemActionRequest, session: Session
     if payload.action != "draft_email":
         raise HTTPException(status_code=400, detail="Unsupported action")
 
-    result = await generate_remediation.generate_remediation(
-        item_id=str(item.id),
-        tone=payload.tone or "polite",
-    )
-    return result
+    try:
+        result = await generate_remediation.generate_remediation(
+            item_id=str(item.id),
+            tone=payload.tone or "polite",
+        )
+        return result
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate remediation: {str(exc)}",
+        )

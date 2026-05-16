@@ -2,14 +2,14 @@
 
 Project: PrivacyProtector — MVP decisions (finalized)
 
-1. Backend stack: **Python 3.11+, FastAPI** + Uvicorn. Use SQLModel (SQLAlchemy) for ORM + Alembic for migrations.
-2. Frontend: React (Next.js optional) — separate repo folder `frontend/`.
-3. LLM provider: OpenAI ChatGPT API (planner + remediation). Calls are made from backend only.
-4. Search provider: **Bing Web Search API** for `searchWeb` (with local mock mode).
-5. Social sources (MVP): **GitHub** (public profile API) and **Reddit** (public posts API).
+1. Backend stack: **Python 3.11+, FastAPI** + Uvicorn. Use SQLModel (SQLAlchemy) for ORM.
+2. Frontend: **Next.js 14** with TailwindCSS — in `frontend/` directory.
+3. LLM provider: **Ollama** (local, qwen3.5:latest). All inference runs locally — no cloud LLM dependency.
+4. Search provider: **Serper.dev** (Google Search API) for `searchWeb`.
+5. Social sources (MVP): GitHub and Reddit APIs — **stubbed** until API keys are configured.
 6. Paid enrichment: **Excluded** from MVP (enrichEntity omitted / stubbed).
-7. Data store: **Postgres** via Docker Compose for dev; optionally local SQLCipher for Electron local-first later.
-8. MCP: backend will expose a tool registry and tool-call endpoints conforming to our MCP-like JSON tool schema (tools: searchWeb, searchSocial, checkBreach, reverseImageSearch (mock), scoreRisk, generateRemediation).
-9. Evals: Use OpenAI Evals for automated tests. CI will run smoke evals using mocked connectors if `OPENAI_API_KEY` is missing.
-10. Security: Local-first default, pseudonymize identifiers before sending to LLM (unless user explicitly opts-in), no face recognition, store audit logs signed (JWS).
-11. Devops: Docker Compose for local development. CI: GitHub Actions with lint / tests / smoke-evals.
+7. Data store: **SQLite** for local dev (fallback), optionally **PostgreSQL** for production.
+8. MCP: backend exposes a tool registry and tool-call endpoints conforming to MCP-like JSON tool schema (tools: searchWeb, searchSocial, checkBreach, reverseImageSearch, scoreRisk, classifyItems, generateRemediation).
+9. Chat interface: Primary user interaction is via a **conversational chat** on `/dashboard`. Backend routes between general Q&A (Ollama) and web search (Serper + Ollama classification) based on intent detection.
+10. Security: Local-first default, pseudonymize identifiers before sending to LLM (unless user explicitly opts-in), no face recognition, JWT-based auth.
+11. Devops: Manual local setup. Backend and frontend run as separate dev servers.

@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-from openai import AsyncOpenAI
+from . import ollama_client
 
 
 _PLANNER_FEWSHOTS_PATH = Path(__file__).parent / "planner_fewshots.json"
@@ -17,8 +17,8 @@ async def _load_fewshots() -> Dict[str, Any]:
 async def get_plan(state: Dict[str, Any], goal: str = "produce_risk_report") -> Dict[str, Any]:
     """Return a planner JSON plan.
 
-    If OPENAI_API_KEY is set and MOCK_CONNECTORS is not true, call OpenAI.
-    Otherwise, return the first example output from planner_fewshots.json.
+    Uses Ollama for LLM planning.  If Ollama is unavailable or
+    MOCK_CONNECTORS is true, falls back to a deterministic mock plan.
     """
 
     data = await _load_fewshots()
@@ -55,13 +55,15 @@ async def get_plan(state: Dict[str, Any], goal: str = "produce_risk_report") -> 
             return example.get("output", {"actions": [], "stop": True})
         return {"actions": [], "stop": True}
 
-    api_key = os.getenv("OPENAI_API_KEY")
     mock_mode = os.getenv("MOCK_CONNECTORS", "false").lower() == "true"
 
-    if not api_key or mock_mode:
+    if mock_mode:
         return _mock_plan(state)
 
-    client = AsyncOpenAI(api_key=api_key)
+    # Check if Ollama is available
+    ollama_ok = await ollama_client.is_available()
+    if not ollama_ok:
+        return _mock_plan(state)
 
     # Build few-shot messages
     messages = []
@@ -91,15 +93,9 @@ async def get_plan(state: Dict[str, Any], goal: str = "produce_risk_report") -> 
     )
 
     try:
-        resp = await client.chat.completions.create(
-            model="gpt-4o-mini",  # small, cheap planner model
-            messages=messages,
-            temperature=0.1,
-        )
-        content = resp.choices[0].message.content or "{}"
-        plan = json.loads(content)
+        plan = await ollama_client.chat_completion_json(messages, temperature=0.1)
         # Basic shape fallback
-        if "actions" not in plan or "stop" not in plan:
+        if not isinstance(plan, dict) or "actions" not in plan or "stop" not in plan:
             return _mock_plan(state)
         return plan
     except Exception:

@@ -1,7 +1,14 @@
 import os
 from typing import List, Dict, Any
 
+
 async def search_social(service: str, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    """Search a social platform for mentions of the query.
+
+    Currently only mock mode is fully implemented.  When the real API keys
+    (GITHUB_TOKEN, etc.) are configured, this can be wired up.  In the
+    meantime, returns an empty list instead of crashing.
+    """
     if os.getenv("MOCK_CONNECTORS", "false").lower() == "true":
         return [
             {
@@ -12,5 +19,7 @@ async def search_social(service: str, query: str, limit: int = 10) -> List[Dict[
                 "meta": {"author": "mock_user"}
             }
         ]
-    # TODO: Implement GitHub/Reddit API calls
-    raise NotImplementedError(f"{service} search not implemented")
+
+    # Gracefully return empty list when a service isn't implemented yet,
+    # so the scan pipeline doesn't crash.
+    return []

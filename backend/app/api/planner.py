@@ -22,5 +22,12 @@ async def get_plan(request: PlannerRequest) -> Dict[str, Any]:
     a JSON plan from the planner service.
     """
 
-    plan = await planner_service.get_plan(state=request.state, goal=request.goal or "produce_risk_report")
-    return plan
+    try:
+        plan = await planner_service.get_plan(state=request.state, goal=request.goal or "produce_risk_report")
+        return plan
+    except Exception as exc:
+        return {
+            "actions": [],
+            "stop": True,
+            "error": f"Planner failed: {str(exc)}. Using empty plan.",
+        }

@@ -23,6 +23,7 @@ export default function HomePage() {
         const res = await login(email, password);
         if (typeof window !== "undefined") {
           localStorage.setItem("pp_token", res.access_token);
+          localStorage.setItem("pp_email", email);
         }
         window.location.href = "/dashboard";
       } else {
@@ -30,6 +31,7 @@ export default function HomePage() {
         const res = await login(email, password);
         if (typeof window !== "undefined") {
           localStorage.setItem("pp_token", res.access_token);
+          localStorage.setItem("pp_email", email);
         }
         window.location.href = "/dashboard";
       }

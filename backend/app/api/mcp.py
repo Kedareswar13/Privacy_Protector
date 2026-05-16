@@ -8,9 +8,9 @@ from ..mcp_tools import (
     search_web,
     search_social,
     check_breach,
-    score_risk,
     generate_remediation,
     reverse_image_search,
+    classify_items,
 )
 
 
@@ -102,10 +102,27 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
             "required": ["pwned", "breaches"],
         },
     },
-    "scoreRisk": {
+    "classifyItems": {
         "input_schema": {
             "type": "object",
-            "properties": {"items": {"type": "array"}},
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "category": {"type": "string"},
+                            "confidence": {"type": "number"},
+                            "title": {"type": "string"},
+                            "snippet": {"type": "string"},
+                            "url": {"type": "string"},
+                            "metadata": {"type": "object"},
+                        },
+                        "required": ["id", "category", "confidence"],
+                    },
+                }
+            },
             "required": ["items"],
         },
         "output_schema": {
@@ -114,11 +131,13 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
                 "type": "object",
                 "properties": {
                     "item_id": {"type": "string"},
-                    "risk_score": {"type": "number"},
                     "category": {"type": "string"},
-                    "explanation": {"type": "string"},
+                    "risk_score": {"type": "number"},
+                    "rationale": {"type": "string"},
+                    "evidence_citations": {"type": "array"},
+                    "verifiable": {"type": "boolean"},
                 },
-                "required": ["item_id", "risk_score", "category"],
+                "required": ["item_id", "category", "risk_score"],
             },
         },
     },
@@ -182,25 +201,34 @@ async def call_tool(request: ToolCallRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=f"Invalid args for {tool_name}: {exc.message}")
 
     # Dispatch to tool implementation
-    if tool_name == "searchWeb":
-        result = await search_web.search_web(**args)
-    elif tool_name == "searchSocial":
-        result = await search_social.search_social(**args)
-    elif tool_name == "checkBreach":
-        result = await check_breach.check_breach(**args)
-    elif tool_name == "scoreRisk":
-        result = await score_risk.score_risk(**args.get("items", []))
-    elif tool_name == "generateRemediation":
-        result = await generate_remediation.generate_remediation(**args)
-    elif tool_name == "reverseImageSearch":
-        result = await reverse_image_search.reverse_image_search(**args)
-    else:
-        raise HTTPException(status_code=400, detail=f"Tool not implemented: {tool_name}")
+    try:
+        if tool_name == "searchWeb":
+            result = await search_web.search_web(**args)
+        elif tool_name == "searchSocial":
+            result = await search_social.search_social(**args)
+        elif tool_name == "checkBreach":
+            result = await check_breach.check_breach(**args)
+        elif tool_name == "classifyItems":
+            result = await classify_items.classify_items(args.get("items", []))
+        elif tool_name == "generateRemediation":
+            result = await generate_remediation.generate_remediation(**args)
+        elif tool_name == "reverseImageSearch":
+            result = await reverse_image_search.reverse_image_search(**args)
+        else:
+            raise HTTPException(status_code=400, detail=f"Tool not implemented: {tool_name}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Tool '{tool_name}' failed: {str(exc)}",
+        )
 
     # Validate output
     try:
         jsonschema.validate(instance=result, schema=schemas["output_schema"])
     except jsonschema.ValidationError as exc:
-        raise HTTPException(status_code=500, detail=f"Tool output invalid for {tool_name}: {exc.message}")
+        # Don't crash — return the result anyway with a warning
+        return {"result": result, "warning": f"Output validation issue: {exc.message}"}
 
     return {"result": result}

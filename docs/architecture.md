@@ -1,51 +1,142 @@
-# docs/architecture.md
-
-PrivacyProtector — Architecture (MVP, Python/FastAPI, MCP)
+# PrivacyProtector — Architecture
 
 ## Overview
-- Web-based, agentic platform.
-- FastAPI backend exposes REST + MCP tool endpoints.
-- LLM Planner (ChatGPT) is used as the decision-making agent: it returns a JSON plan listing MCP tool calls.
-- Executor runs tool calls, enforces safety & pseudonymization, writes results to DB.
-- EVALS run in CI for discovery, risk classification, remediation quality, and agenticity metrics.
+
+PrivacyProtector is an AI-powered privacy scanner that helps users discover where
+their personal data appears on the public internet. It uses a **chat-based interface**
+where users can ask general privacy questions or request web searches for their
+digital footprint.
+
+**Key design choices:**
+- **Local-first AI** — all LLM inference runs on the user's machine via **Ollama** (no data sent to OpenAI/cloud LLMs).
+- **Serper API** for real-time web search (Google Search results via serper.dev).
+- **Intent-based routing** — the backend detects whether the user wants a general answer or a web search and routes accordingly.
+- **MCP-style tool registry** — tools are registered with JSON schemas and can be called individually or orchestrated by the planner.
+
+---
+
+## System Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     User's Browser                           │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │           Next.js Frontend (port 3000)                 │  │
+│  │  • Login / Register page                               │  │
+│  │  • Chat Dashboard (privacy assistant)                  │  │
+│  │  • Scan detail pages                                   │  │
+│  └────────────────────┬───────────────────────────────────┘  │
+└───────────────────────┼──────────────────────────────────────┘
+                        │ REST API calls
+                        ▼
+┌──────────────────────────────────────────────────────────────┐
+│              FastAPI Backend (port 8000)                      │
+│                                                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
+│  │ /auth    │  │ /chat    │  │ /scans   │  │ /mcp     │    │
+│  │ (JWT)    │  │ (main)   │  │ (scans)  │  │ (tools)  │    │
+│  └──────────┘  └─────┬────┘  └──────────┘  └──────────┘    │
+│                      │                                       │
+│         ┌────────────┴────────────┐                          │
+│         │    Intent Detection     │                          │
+│         └─────┬──────────┬────────┘                          │
+│               │          │                                   │
+│     General   │          │  Search                           │
+│     Question  │          │  Request                          │
+│               ▼          ▼                                   │
+│         ┌──────────┐  ┌──────────────┐                      │
+│         │ Ollama   │  │ Serper API   │                      │
+│         │ (local)  │  │ (web search) │                      │
+│         └──────────┘  └──────┬───────┘                      │
+│                              │                               │
+│                              ▼                               │
+│                        ┌───────────┐                         │
+│                        │ Classify  │ ← Ollama risk scoring   │
+│                        │ & Score   │                         │
+│                        └───────────┘                         │
+│                              │                               │
+│                              ▼                               │
+│                     ┌────────────────┐                       │
+│                     │ SQLite / Postgres │                    │
+│                     │ (scans, items,   │                    │
+│                     │  users, etc.)    │                    │
+│                     └────────────────┘                       │
+└──────────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌──────────────────────────────────────────────────────────────┐
+│                Ollama Server (port 11434)                     │
+│                   qwen3.5:latest                             │
+│  • General Q&A                                               │
+│  • Risk classification                                       │
+│  • Planner (tool selection)                                  │
+│  • Remediation drafts                                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## Components
 
-### 1. Frontend (React)
-- Consent UI, seed input, scan progress, risk dashboard, item detail, remediation composer.
+### 1. Frontend (Next.js 14 + TailwindCSS)
+- **Login/Register** page with JWT-based auth
+- **Chat Dashboard** — conversational interface where users ask privacy questions or request web searches
+- **Scan Detail** pages for viewing individual findings
+- Dark theme with glassmorphism design
 
-### 2. Backend (FastAPI)
-- /auth endpoints (JWT)
-- /consent endpoints (sign & store)
-- /scan endpoints (start, status, items)
-- /planner endpoints (planner wrapper debug)
-- /mcp/tools (registry)
-- /mcp/call (executor endpoint; internal)
+### 2. Backend (Python FastAPI)
+| Endpoint Group | Purpose |
+|---------------|---------|
+| `/auth` | User registration and JWT login |
+| `/consent` | Explicit consent management |
+| `/chat` | **Primary endpoint** — routes between Ollama (Q&A) and Serper (search) |
+| `/scans` | Create, run, and retrieve scan results |
+| `/items` | Item details and remediation actions |
+| `/planner` | Debug endpoint for planner output |
+| `/mcp` | MCP tool registry and individual tool calls |
 
-### 3. MCP tool implementations (server-side)
-- searchWeb (Bing)
-- searchSocial (GitHub, Reddit)
-- checkBreach (HaveIBeenPwned or mock)
-- reverseImageSearch (mocked for MVP)
-- scoreRisk (local rules)
-- generateRemediation (LLM handler with pseudonymization)
+### 3. MCP Tool Implementations
+| Tool | Provider | Status |
+|------|----------|--------|
+| `searchWeb` | Serper.dev (Google Search) | ✅ Live |
+| `classifyItems` | Ollama (qwen3.5) | ✅ Live |
+| `generateRemediation` | Ollama (qwen3.5) | ✅ Live |
+| `scoreRisk` | Local rules engine | ✅ Live |
+| `checkBreach` | HIBP (stubbed) | ⬜ Needs API key |
+| `searchSocial` | GitHub/Reddit (stubbed) | ⬜ Needs API keys |
+| `reverseImageSearch` | Mocked | ⬜ Needs real API |
 
-### 4. State store
-- Postgres DB holds users, consents, scans, items, pseudonym_map, tool_calls, audit_log.
+### 4. Data Store
+- **SQLite** (default, local development) or **PostgreSQL** (production)
+- Tables: `user`, `consent`, `scan`, `item`, `toolcall`
 
-### 5. LLM interactions
-- Planner: calls ChatGPT to produce JSON plan (strategy + tool selection + rationale).
-- Remediation: ChatGPT drafts pseudonymized emails/steps.
-- All LLM requests made only from backend. PII is pseudonymized before sending.
+### 5. LLM Layer (Ollama)
+- All LLM calls route through `ollama_client.py` to the local Ollama server
+- Model: `qwen3.5:latest` (274 MB, supports thinking/reasoning)
+- PII is pseudonymized before sending to the LLM
+- Used for: planning, classification, remediation drafting, general Q&A
 
-### 6. Evals
-- OpenAI Evals harness invoked in CI.
-- Local mock-run mode available when no keys are present.
+---
 
-## Data flow (high level)
-User → Frontend → Backend (create scan) → Planner (LLM) returns plan → Executor calls MCP tools → Tools return results → Executor updates state → Loop until planner stop → Final Report (LLM) → User.
+## Data Flow
 
-## Security & privacy
-- Pseudonymize identifiers prior to OpenAI calls by default.
-- Consent must be explicit; store signed audit entries.
-- No face-recognition; reverse image search allowed only as a metadata lookup.
+### Chat Flow (Primary)
+```
+User message → /chat endpoint → Intent Detection
+  ├─ General question → Ollama → reply text
+  └─ Search request  → Serper API → raw results → Ollama classification → reply + search_results
+```
+
+### Scan Flow (Legacy/Programmatic)
+```
+Create scan → Planner (Ollama) → Tool calls → Store items → Classify (Ollama) → Report
+```
+
+---
+
+## Security & Privacy
+- **Local-first LLM** — no data leaves the machine for AI inference
+- **Pseudonymization** — identifiers are HMAC-hashed before LLM calls
+- **Explicit consent** — scans require user opt-in
+- **No face recognition** — reverse image search uses file-hash matching only
+- **JWT auth** — stateless token-based authentication

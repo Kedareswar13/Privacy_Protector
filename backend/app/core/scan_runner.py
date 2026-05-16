@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 from sqlmodel import Session, select
 
 from ..db.models import Scan, Item, ToolCall
-from ..mcp_tools import search_web, search_social, check_breach, score_risk, reverse_image_search
+from ..mcp_tools import search_web, search_social, check_breach, reverse_image_search, classify_items
 from . import planner_service
 
 
@@ -108,7 +108,7 @@ async def run_scan_once(scan_id: int, session: Session) -> Dict[str, Any]:
             # For now, ignore other tools in the plan
             continue
 
-    # Risk scoring for created items
+    # LLM-based classification for created items
     if created_items:
         # Ensure items have primary keys assigned
         session.flush()
@@ -117,15 +117,33 @@ async def run_scan_once(scan_id: int, session: Session) -> Dict[str, Any]:
                 "id": str(item.id),
                 "category": item.category,
                 "confidence": item.confidence,
+                "title": item.title,
+                "snippet": item.snippet,
+                "url": item.url,
+                "metadata": json.loads(item.metadata_json or "{}"),
             }
             for item in created_items
         ]
-        scores = await score_risk.score_risk(items_payload)
-        by_id = {s.get("item_id"): s for s in scores}
+
+        classifications = await classify_items.classify_items(items_payload)
+        by_id = {c.get("item_id"): c for c in classifications}
         for item in created_items:
-            s = by_id.get(str(item.id))
-            if s is not None:
-                item.risk_score = float(s.get("risk_score", 0.0))
+            c = by_id.get(str(item.id))
+            if c is None:
+                continue
+            item.category = c.get("category", item.category)
+            item.risk_score = float(c.get("risk_score", 0.0))
+            # Merge LLM classification into metadata_json for audit
+            try:
+                meta = json.loads(item.metadata_json or "{}")
+            except Exception:
+                meta = {}
+            meta["llm_classification"] = {
+                "rationale": c.get("rationale"),
+                "evidence_citations": c.get("evidence_citations", []),
+                "verifiable": c.get("verifiable", True),
+            }
+            item.metadata_json = json.dumps(meta)
 
     scan.status = "completed"
     session.commit()

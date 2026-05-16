@@ -49,3 +49,17 @@ class ToolCall(SQLModel, table=True):
     response_json: str
     duration_ms: Optional[int] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ChatMessageRecord(SQLModel, table=True):
+    """Persists chat messages (user + assistant) per user account."""
+
+    __tablename__ = "chatmessagerecord"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    role: str  # "user" or "assistant"
+    content: str
+    search_results_json: Optional[str] = None  # JSON array of search results (if any)
+    is_search: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)

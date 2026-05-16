@@ -41,17 +41,48 @@ async def search_web(query: str, limit: int = 10) -> List[Dict[str, Any]]:
             resp = await client.post("https://google.serper.dev/search", headers=headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
-    except Exception:
-        # On any error, degrade gracefully to a single mock result so the
-        # agent experience doesn't break completely.
-        return [
-            {
-                "title": f"Mock result for {query}",
-                "snippet": f"This is a mock snippet about {query}",
-                "url": f"https://example.com/mock/{query.replace(' ', '%20')}",
-                "date": "2024-01-01",
-            }
-        ]
+    except httpx.TimeoutException:
+        return [{
+            "title": "⚠️ Search Timeout",
+            "snippet": "The search service took too long to respond. Please try again later.",
+            "url": "",
+            "date": ""
+        }]
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 429:
+            return [{
+                "title": "⚠️ Search Rate Limit Exceeded",
+                "snippet": "We have hit the rate limit for the search API. Please wait a moment before trying again.",
+                "url": "",
+                "date": ""
+            }]
+        elif exc.response.status_code in [401, 403]:
+            return [{
+                "title": "⚠️ Search Authentication Error",
+                "snippet": "The search API key is invalid or missing. Please check your configuration.",
+                "url": "",
+                "date": ""
+            }]
+        return [{
+            "title": f"⚠️ Search Error ({exc.response.status_code})",
+            "snippet": f"The search service returned an error: {exc.response.text}",
+            "url": "",
+            "date": ""
+        }]
+    except httpx.RequestError:
+        return [{
+            "title": "⚠️ Search Connection Error",
+            "snippet": "Could not connect to the search service. Please check your network connection.",
+            "url": "",
+            "date": ""
+        }]
+    except Exception as exc:
+        return [{
+            "title": "⚠️ Unexpected Search Error",
+            "snippet": f"An unexpected error occurred during the search: {str(exc)}",
+            "url": "",
+            "date": ""
+        }]
 
     organic = data.get("organic", []) or []
     results: List[Dict[str, Any]] = []

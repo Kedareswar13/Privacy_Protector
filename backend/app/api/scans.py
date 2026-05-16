@@ -1,4 +1,5 @@
 from typing import Any, Dict, List
+import json
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -64,16 +65,33 @@ async def get_scan(scan_id: int, session: Session = Depends(get_session)) -> Dic
 
 @router.post("/{scan_id}/run")
 async def run_scan(scan_id: int, session: Session = Depends(get_session)) -> Dict[str, Any]:
-    result = await run_scan_once(scan_id=scan_id, session=session)
-    return result
+    try:
+        result = await run_scan_once(scan_id=scan_id, session=session)
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Scan failed: {str(exc)}. Some tools may have encountered errors.",
+        )
 
 
 @router.get("/{scan_id}/items")
 async def list_scan_items(scan_id: int, session: Session = Depends(get_session)) -> List[Dict[str, Any]]:
     statement = select(Item).where(Item.scan_id == scan_id)
     items = session.exec(statement).all()
-    return [
-        {
+    result_items = []
+    for item in items:
+        # Safely parse metadata_json — don't crash on corrupt data
+        llm_data = {}
+        if item.metadata_json:
+            try:
+                meta = json.loads(item.metadata_json)
+                llm_data = meta.get("llm_classification", {})
+            except (json.JSONDecodeError, TypeError):
+                llm_data = {}
+        result_items.append({
             "id": item.id,
             "category": item.category,
             "source": item.source,
@@ -82,9 +100,11 @@ async def list_scan_items(scan_id: int, session: Session = Depends(get_session))
             "url": item.url,
             "confidence": item.confidence,
             "risk_score": item.risk_score,
-        }
-        for item in items
-    ]
+            "llm_rationale": llm_data.get("rationale"),
+            "llm_evidence_citations": llm_data.get("evidence_citations", []),
+            "llm_verifiable": llm_data.get("verifiable", True),
+        })
+    return result_items
 
 
 @router.get("/items/{item_id}")
